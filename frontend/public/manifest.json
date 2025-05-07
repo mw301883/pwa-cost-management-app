@@ -1,0 +1,24 @@
+{
+  "name": "Cost Management App",
+  "short_name": "CostsApp",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d6efd",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "1500x1500",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "login_screenshot.png",
+      "sizes": "1848x965",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Główna strona logowania aplikacji"
+    }
+  ]
+}
