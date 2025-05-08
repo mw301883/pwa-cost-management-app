@@ -19,7 +19,7 @@ function RegisterPage() {
         }
 
         try {
-            const response = await axios.post('http://localhost:5000/api/users/register', {email, password});
+            const response = await axios.post('/api/users/register', {email, password});
             setSuccessMessage(response.data.message);
             setTimeout(() => {
                 navigate('/login');

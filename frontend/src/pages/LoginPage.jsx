@@ -12,7 +12,7 @@ function LoginPage() {
         e.preventDefault();
 
         try {
-            const response = await axios.post('http://localhost:5000/api/users/login', { email, password });
+            const response = await axios.post('/api/users/login', { email, password });
             const { token, userId } = response.data;
             localStorage.setItem('token', token);
             localStorage.setItem('userId', JSON.stringify(userId));

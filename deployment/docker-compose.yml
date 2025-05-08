@@ -1,1 +1,31 @@
-# TODO add configuration for containers in one network: frontend, backend, mongodb, nginx (optionally)
+version: '3.9'
+
+services:
+  frontend:
+    image: pwa-cost-management-app-frontend
+    container_name: pwa-cost-management-app-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  backend:
+    image: pwa-cost-management-app-backend
+    container_name: pwa-cost-management-app-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:6
+    container_name: pwa-cost-management-app-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
