@@ -8,8 +8,7 @@ const staticAssets = [
     '/src/main.jsx',
     '/src/App.jsx',
     '/src/pages/DashboardPage.jsx',
-    '/src/pages/LoginPage.jsx',
-    '/src/pages/RegisterPage.jsx',
+
 ];
 
 self.addEventListener('install', (e) => {
