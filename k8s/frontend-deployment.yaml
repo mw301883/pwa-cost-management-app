@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert
+    kompose.version: 1.21.0 (992df58d8)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: frontend
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: frontend
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert
+        kompose.version: 1.21.0 (992df58d8)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: frontend
+    spec:
+      containers:
+        - name: pwa-cost-management-app-frontend
+          image: michaelwieczorek/pwa-cost-management-app:pwa-cost-management-app-frontend
+          ports:
+            - containerPort: 443
+          volumeMounts:
+            - name: tls-secret
+              mountPath: /etc/nginx/ssl
+              readOnly: true
+      volumes:
+        - name: tls-secret
+          secret:
+            secretName: frontend-tls-secret
+      restartPolicy: Always
+status: {}
