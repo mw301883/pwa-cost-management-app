@@ -29,7 +29,7 @@ spec:
       - env:
         - name: MONGO_URI
         image: michaelwieczorek/pwa-cost-management-app:pwa-cost-management-app-backend
-        imagePullPolicy: ""
+        imagePullPolicy: Always
         name: pwa-cost-management-app-backend
         ports:
         - containerPort: 5000

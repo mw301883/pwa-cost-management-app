@@ -8,8 +8,12 @@ const staticAssets = [
     '/icons/manifest-icon-512.maskable.png',
     '/src/main.jsx',
     '/src/App.jsx',
+    '/src/components/Navbar.jsx',
     '/src/pages/DashboardPage.jsx',
-
+    '/src/pages/AnalysisPage.jsx',
+    '/src/pages/BudgetPage.jsx',
+    '/src/pages/ReportsPage.jsx',
+    '/src/pages/TransactionsPage.jsx',
 ];
 
 self.addEventListener('install', (e) => {
@@ -40,19 +44,19 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
     e.respondWith(
-        caches.match(e.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-
-            return fetch(e.request).then((networkResponse) => {
+        fetch(e.request)
+            .then((networkResponse) => {
                 if (networkResponse && networkResponse.status === 200) {
+                    const responseClone = networkResponse.clone();
                     caches.open(cacheName).then((cache) => {
-                        cache.put(e.request, networkResponse.clone());
+                        cache.put(e.request, responseClone);
                     });
                 }
                 return networkResponse;
-            });
-        })
+            })
+            .catch(() => {
+                return caches.match(e.request);
+            })
     );
 });
+

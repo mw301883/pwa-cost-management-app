@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - image: michaelwieczorek/pwa-cost-management-app:pwa-cost-management-app-frontend
-        imagePullPolicy: ""
+        imagePullPolicy: Always
         name: pwa-cost-management-app-frontend
         ports:
         - containerPort: 80
