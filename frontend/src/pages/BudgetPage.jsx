@@ -6,6 +6,12 @@ function BudgetPage() {
     const [balance, setBalance] = useState(0);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+    const [month, setMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+});
+
+
     useEffect(() => {
         const updateOnlineStatus = () => setIsOnline(navigator.onLine);
 
@@ -20,15 +26,15 @@ function BudgetPage() {
 
     useEffect(() => {
         if (isOnline) {
-            fetch('/api/budget')
+            fetch(`/api/budget/${month}`)
                 .then(res => res.json())
                 .then(data => {
                     setIncome(data.income);
                     setExpenses(data.expenses);
                     setBalance(data.income - data.expenses);
 
-                    localStorage.setItem('income', data.income);
-                    localStorage.setItem('expenses', data.expenses);
+                    localStorage.setItem(`budget-${month}`, JSON.stringify(data));
+
                 })
                 .catch(() => {
                     loadFromLocalStorage();
@@ -36,14 +42,13 @@ function BudgetPage() {
         } else {
             loadFromLocalStorage();
         }
-    }, [isOnline]);
+    }, [isOnline, month]);
 
     const loadFromLocalStorage = () => {
-        const savedIncome = parseFloat(localStorage.getItem('income')) || 0;
-        const savedExpenses = parseFloat(localStorage.getItem('expenses')) || 0;
-        setIncome(savedIncome);
-        setExpenses(savedExpenses);
-        setBalance(savedIncome - savedExpenses);
+        const saved = JSON.parse(localStorage.getItem(`budget-${month}`)) || { income: 0, expenses: 0 };
+        setIncome(saved.income);
+        setExpenses(saved.expenses);
+        setBalance(saved.income - saved.expenses);
     };
 
     const handleSave = () => {
@@ -52,12 +57,11 @@ function BudgetPage() {
         const newBalance = newIncome - newExpenses;
 
         setBalance(newBalance);
-
-        localStorage.setItem('income', newIncome);
-        localStorage.setItem('expenses', newExpenses);
+        const data = { income: newIncome, expenses: newExpenses };
+        localStorage.setItem(`budget-${month}`, JSON.stringify(data));
 
         if (isOnline) {
-            fetch('/api/budget', {
+            fetch(`/api/budget/${month}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -93,6 +97,15 @@ function BudgetPage() {
                 />
             </div>
 
+            <div className="mb-3">
+                <label className="form-label">Miesiąc</label>
+                <input
+                    type="month"
+                    className="form-control"
+                    value={month}
+                    onChange={(e) => setMonth(e.target.value)}
+                />
+            </div>
             <button className="btn btn-primary" onClick={handleSave}>
                 Zapisz
             </button>
