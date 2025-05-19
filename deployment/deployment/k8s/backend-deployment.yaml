@@ -28,6 +28,7 @@ spec:
       containers:
       - env:
         - name: MONGO_URI
+          value: mongodb://mongo:27017/cost-management-app
         image: michaelwieczorek/pwa-cost-management-app:pwa-cost-management-app-backend
         imagePullPolicy: Always
         name: pwa-cost-management-app-backend
