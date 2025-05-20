@@ -46,7 +46,7 @@ function BudgetPage({ isOnline }) {
 
                     setIncome(String(data.income));
                     setExpenses(String(data.expenses));
-                    setBalance(data.income - data.expenses);
+                    setBalance(calculateCumulativeBalance(date));
 
                     localStorage.setItem(`budget-${date}`, JSON.stringify(data));
                 } catch {
@@ -59,6 +59,24 @@ function BudgetPage({ isOnline }) {
 
         loadData();
     }, [isOnline, date]);
+
+    const calculateCumulativeBalance = (upToDate) => {
+        let totalIncome = 0;
+        let totalExpenses = 0;
+
+        months.forEach((month) => {
+            if (month <= upToDate) {
+                const item = JSON.parse(localStorage.getItem(`budget-${month}`));
+                if (item) {
+                    totalIncome += parseFloat(item.income) || 0;
+                    totalExpenses += parseFloat(item.expenses) || 0;
+                }
+            }
+        });
+
+        return totalIncome - totalExpenses;
+    };
+
 
     const syncAllBudgetsWithAPI = async () => {
         for (let i = 0; i < localStorage.length; i++) {
@@ -105,7 +123,7 @@ function BudgetPage({ isOnline }) {
         const saved = JSON.parse(localStorage.getItem(`budget-${date}`)) || { income: 0, expenses: 0 };
         setIncome(String(saved.income));
         setExpenses(String(saved.expenses));
-        setBalance(saved.income - saved.expenses);
+        setBalance(calculateCumulativeBalance(date));
     };
 
     const handleSave = () => {
@@ -113,7 +131,7 @@ function BudgetPage({ isOnline }) {
         const newExpenses = parseFloat(expenses) || 0;
         const newBalance = newIncome - newExpenses;
 
-        setBalance(newBalance);
+        setBalance(balance + newBalance);
         const data = { income: newIncome, expenses: newExpenses };
         localStorage.setItem(`budget-${date}`, JSON.stringify(data));
 
@@ -159,7 +177,36 @@ function BudgetPage({ isOnline }) {
 
                 setIncome('0');
                 setExpenses('0');
-                setBalance(0);
+                setBalance(calculateCumulativeBalance(newMonth));
+            }
+        } else if (value === '__add_prev__') {
+            const firstMonth = months[0];
+            const [yearStr, monthStr] = firstMonth.split("-");
+            let year = parseInt(yearStr);
+            let month = parseInt(monthStr);
+
+            month--;
+            if (month < 1) {
+                month = 12;
+                year--;
+            }
+
+            const newMonth = `${year}-${String(month).padStart(2, '0')}`;
+            if (!months.includes(newMonth)) {
+                const updated = [newMonth, ...months];
+                setMonths(updated);
+                setDate(newMonth);
+
+                const defaultData = { income: 0, expenses: 0 };
+                localStorage.setItem(`budget-${newMonth}`, JSON.stringify(defaultData));
+
+                if (isOnline) {
+                    updateServerBudget(newMonth, defaultData);
+                }
+
+                setIncome('0');
+                setExpenses('0');
+                setBalance(calculateCumulativeBalance(newMonth));
             }
         } else {
             setDate(value);
@@ -188,6 +235,7 @@ function BudgetPage({ isOnline }) {
             <div className="mb-3">
                 <label className="form-label">Miesiąc</label>
                 <select className="form-select" value={date} onChange={handleMonthChange}>
+                    <option value="__add_prev__">➕ Dodaj poprzedni miesiąc</option>
                     {months.map((m) => (
                         <option key={m} value={m}>
                             {m}
