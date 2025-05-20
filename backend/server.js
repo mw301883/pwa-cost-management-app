@@ -33,9 +33,11 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
     .then(() => console.log("Połączono z MongoDB."))
     .catch((err) => console.log(err));
 
+const transactionRouter = require('./router/transactionRouter'); 
 const budgetRouter = require('./router/budgetRouter');
 
 app.use('/api/budget', budgetRouter);
+app.use('/api/transactions', transactionRouter);
 
 const PORT = 5000;
 app.listen(PORT, () => {
