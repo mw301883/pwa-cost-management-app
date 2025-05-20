@@ -16,6 +16,31 @@ router.get('/:date', async (req, res) => {
     }
 });
 
+router.get('/', async (req, res) => {
+    try {
+        let budgets = await Budget.find();
+
+        if (!budgets || budgets.length === 0) {
+            const now = new Date();
+            const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+            const newBudget = await Budget.create({
+                date: currentMonth,
+                income: 0,
+                expenses: 0,
+            });
+
+            budgets = [newBudget];
+        }
+
+        res.json(budgets);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Błąd serwera' });
+    }
+});
+
+
 router.put('/', async (req, res) => {
     try {
         const { date, income, expenses } = req.body;

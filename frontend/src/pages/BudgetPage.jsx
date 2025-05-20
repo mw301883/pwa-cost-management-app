@@ -5,60 +5,117 @@ function BudgetPage({ isOnline }) {
     const [expenses, setExpenses] = useState('');
     const [balance, setBalance] = useState(0);
     const [months, setMonths] = useState([]);
-
+    const [isInitialized, setIsInitialized] = useState(false);
     const [date, setDate] = useState(() => {
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     });
 
     useEffect(() => {
-        const initMonths = () => {
+        const initMonthsAndLoadData = async () => {
             const found = new Set();
+
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 if (key.startsWith('budget-')) {
-                    const date = key.replace('budget-', '');
-                    found.add(date);
+                    const dateKey = key.replace('budget-', '');
+                    found.add(dateKey);
                 }
             }
+
+            if (found.size === 0 && isOnline) {
+                try {
+                    const res = await fetch('/api/budget');
+                    if (res.ok) {
+                        const apiBudgets = await res.json();
+                        for (const entry of apiBudgets) {
+                            localStorage.setItem(`budget-${entry.date}`, JSON.stringify(entry));
+                            found.add(entry.date);
+                        }
+                    }
+                } catch (err) {
+                    console.warn("❌ Błąd pobierania danych z API:", err);
+                }
+            }
+
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             found.add(currentMonth);
+
             const sorted = Array.from(found).sort();
             setMonths(sorted);
+
+            let selectedDate = date;
             if (!sorted.includes(date)) {
+                selectedDate = currentMonth;
                 setDate(currentMonth);
             }
-        };
-        initMonths();
-    }, []);
 
+            const loadFromLocalStorage = () => {
+                const saved = JSON.parse(localStorage.getItem(`budget-${selectedDate}`)) || { income: 0, expenses: 0 };
+                setIncome(String(saved.income));
+                setExpenses(String(saved.expenses));
+                setBalance(calculateCumulativeBalance(selectedDate));
+            };
 
-    useEffect(() => {
-        const loadData = async () => {
+            const syncAllBudgetsWithAPI = async () => {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('budget-')) {
+                        const date = key.replace('budget-', '');
+                        const localData = JSON.parse(localStorage.getItem(key));
+
+                        try {
+                            const res = await fetch(`/api/budget/${date}`);
+                            if (!res.ok) throw new Error();
+
+                            const serverData = await res.json();
+                            const isDifferent = (
+                                serverData.income !== localData.income ||
+                                serverData.expenses !== localData.expenses
+                            );
+
+                            if (isDifferent) {
+                                await updateServerBudget(date, localData);
+                            }
+                        } catch {
+                            await updateServerBudget(date, localData);
+                        }
+                    }
+                }
+            };
+
             if (isOnline) {
                 await syncAllBudgetsWithAPI();
 
                 try {
-                    const res = await fetch(`/api/budget/${date}`);
+                    const res = await fetch(`/api/budget/${selectedDate}`);
                     if (!res.ok) throw new Error("Brak danych na serwerze");
+
                     const data = await res.json();
 
                     setIncome(String(data.income));
                     setExpenses(String(data.expenses));
-                    setBalance(calculateCumulativeBalance(date));
+                    setBalance(calculateCumulativeBalance(selectedDate));
 
-                    localStorage.setItem(`budget-${date}`, JSON.stringify(data));
+                    localStorage.setItem(`budget-${selectedDate}`, JSON.stringify(data));
                 } catch {
                     loadFromLocalStorage();
                 }
             } else {
                 loadFromLocalStorage();
             }
+            setIsInitialized(true);
         };
 
-        loadData();
+        initMonthsAndLoadData();
     }, [isOnline, date]);
+
+    useEffect(() => {
+        if (isInitialized) {
+            setBalance(calculateCumulativeBalance(date));
+        }
+    }, [isInitialized, date]);
 
     const calculateCumulativeBalance = (upToDate) => {
         let totalIncome = 0;
@@ -77,35 +134,6 @@ function BudgetPage({ isOnline }) {
         return totalIncome - totalExpenses;
     };
 
-
-    const syncAllBudgetsWithAPI = async () => {
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key.startsWith('budget-')) {
-                const date = key.replace('budget-', '');
-                const localData = JSON.parse(localStorage.getItem(key));
-
-                try {
-                    const res = await fetch(`/api/budget/${date}`);
-                    if (!res.ok) throw new Error("Brak danych na serwerze");
-
-                    const serverData = await res.json();
-
-                    const isDifferent = (
-                        serverData.income !== localData.income ||
-                        serverData.expenses !== localData.expenses
-                    );
-
-                    if (isDifferent) {
-                        await updateServerBudget(date, localData);
-                    }
-                } catch (err) {
-                    await updateServerBudget(date, localData);
-                }
-            }
-        }
-    };
-
     const updateServerBudget = async (date, localData) => {
         try {
             await fetch(`/api/budget`, {
@@ -119,22 +147,15 @@ function BudgetPage({ isOnline }) {
         }
     };
 
-    const loadFromLocalStorage = () => {
-        const saved = JSON.parse(localStorage.getItem(`budget-${date}`)) || { income: 0, expenses: 0 };
-        setIncome(String(saved.income));
-        setExpenses(String(saved.expenses));
-        setBalance(calculateCumulativeBalance(date));
-    };
-
     const handleSave = () => {
         const newIncome = parseFloat(income) || 0;
         const newExpenses = parseFloat(expenses) || 0;
-        const newBalance = newIncome - newExpenses;
-
-        setBalance(balance + newBalance);
         const data = { income: newIncome, expenses: newExpenses };
         localStorage.setItem(`budget-${date}`, JSON.stringify(data));
-
+        if (!months.includes(date)) {
+            setMonths(prev => Array.from(new Set([...prev, date])).sort());
+        }
+        setBalance(calculateCumulativeBalance(date));
         if (isOnline) {
             fetch(`/api/budget`, {
                 method: 'PUT',
