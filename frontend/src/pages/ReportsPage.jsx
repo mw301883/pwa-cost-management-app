@@ -36,7 +36,6 @@ function ReportsPage({ isOnline }) {
                 }
             }
 
-            // Posortuj miesiące chronologicznie
             const sorted = Array.from(found).sort();
             setMonths(sorted);
             setIsLoading(false);
