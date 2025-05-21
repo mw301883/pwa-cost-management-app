@@ -5,90 +5,81 @@ const Budget = require("../models/Budget");
 
 router.get('/:date', async (req, res) => {
     try {
-        const { date } = req.params;
-        const transactions = await Transaction.find({ date });
+        const {date} = req.params;
+        const transactions = await Transaction.find({date});
         res.json(transactions);
     } catch (err) {
-        res.status(500).json({ error: 'Błąd serwera' });
+        res.status(500).json({error: 'Błąd serwera.'});
     }
 });
 
 router.post('/', async (req, res) => {
     try {
-        const { date, description, amount } = req.body;
-        const transaction = new Transaction({ date, description, amount });
+        const {date, description, amount} = req.body;
+        const transaction = new Transaction({date, description, amount});
         await transaction.save();
 
-        // Znajdujemy lub tworzymy budżet dla danego miesiąca
-        let budget = await Budget.findOne({ date });
-        if (!budget) {
-            budget = new Budget({ date, income: 0, expenses: 0 });
-        }
-
-        // Aktualizujemy przychody lub wydatki w zależności od znaku kwoty
-        if (amount >= 0) {
-            budget.income += amount;
-        } else {
-            budget.expenses += Math.abs(amount);
-        }
-        
-        await budget.save();
-
-        res.json({ 
-            message: 'Dodano transakcję', 
-            transaction, 
-            budget 
+        res.json({
+            message: 'Dodano transakcję.',
+            transaction
         });
     } catch (err) {
         console.error('Błąd zapisu transakcji:', err);
-        res.status(500).json({ error: 'Błąd zapisu transakcji' });
+        res.status(500).json({error: 'Błąd zapisu transakcji.'});
     }
 });
 
-// Dodatkowy endpoint do synchronizacji wielu transakcji z trybu offline
 router.post('/sync', async (req, res) => {
     try {
-        const { transactions } = req.body;
+        const {transactions} = req.body;
         const results = [];
-        
+
         for (const tx of transactions) {
-            const { date, description, amount } = tx;
-            
-            // Sprawdź czy transakcja już istnieje (unikaj duplikatów)
+            const {date, description, amount} = tx;
+
             const existingTx = await Transaction.findOne({
                 date,
                 description,
-                amount: amount
+                amount
             });
-            
+
             if (!existingTx) {
-                const transaction = new Transaction({ date, description, amount });
+                const transaction = new Transaction({date, description, amount});
                 await transaction.save();
-                
-                // Aktualizuj budżet
-                let budget = await Budget.findOne({ date });
-                if (!budget) {
-                    budget = new Budget({ date, income: 0, expenses: 0 });
-                }
-                
-                if (amount >= 0) {
-                    budget.income += amount;
-                } else {
-                    budget.expenses += Math.abs(amount);
-                }
-                
-                await budget.save();
-                
-                results.push({ success: true, transaction });
+
+                results.push({success: true, transaction});
             } else {
-                results.push({ success: false, message: 'Transakcja już istnieje' });
+                existingTx.date = date;
+                existingTx.description = description;
+                existingTx.amount = amount;
+                await existingTx.save();
+                results.push({
+                    success: false,
+                    message: 'Istniejąca transakcja została nadpisana danymi z lokalnego bufora.'
+                });
             }
         }
-        
-        res.json({ message: 'Synchronizacja zakończona', results });
+
+        res.json({message: 'Synchronizacja zakończona.', results});
     } catch (err) {
         console.error('Błąd synchronizacji transakcji:', err);
-        res.status(500).json({ error: 'Błąd synchronizacji transakcji' });
+        res.status(500).json({error: 'Błąd synchronizacji transakcji.'});
+    }
+});
+
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deleted = await Transaction.findByIdAndDelete(id);
+
+        if (!deleted) {
+            return res.status(404).json({ error: 'Nie znaleziono transakcji do usunięcia.' });
+        }
+
+        res.json({ message: 'Transakcja została usunięta.', id });
+    } catch (err) {
+        console.error('Błąd usuwania transakcji:', err);
+        res.status(500).json({ error: 'Błąd serwera przy usuwaniu transakcji.' });
     }
 });
 

@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
+import handleNumberKeyDown from "../helpers/numInputVerifier.js";
 
 function BudgetPage({ isOnline }) {
     const [income, setIncome] = useState('');
     const [expenses, setExpenses] = useState('');
-    const [balance, setBalance] = useState(0);
+    const [predictedBalance, setPredictedBalance] = useState(0);
+    const [actualBalance, setActualBalance] = useState(0);
     const [months, setMonths] = useState([]);
     const [isInitialized, setIsInitialized] = useState(false);
     const [date, setDate] = useState(() => {
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     });
+    const [transactionsForCurrentMonth,setTransactionsForCurrentMonth] = useState({});
 
     useEffect(() => {
         const initMonthsAndLoadData = async () => {
@@ -51,11 +54,28 @@ function BudgetPage({ isOnline }) {
                 setDate(currentMonth);
             }
 
+            const fetchTransactionsForCurrentMonth = async () => {
+                try {
+                    if (isOnline) {
+                        const res = await fetch(`/api/transactions/${selectedDate}`);
+                        if (res.ok) {
+                            const transactions = await res.json();
+                            setTransactionsForCurrentMonth(transactions);
+                        }
+                    } else {
+                        const transactions = JSON.parse(localStorage.getItem(`transactions-${selectedDate}`)) || [];
+                        setTransactionsForCurrentMonth(transactions);
+                    }
+                } catch (e) {
+                    console.error(`Błąd pobierania transakcji dla ${selectedDate}:`, e);
+                }
+            }
+
             const loadFromLocalStorage = () => {
                 const saved = JSON.parse(localStorage.getItem(`budget-${selectedDate}`)) || { income: 0, expenses: 0 };
                 setIncome(String(saved.income));
                 setExpenses(String(saved.expenses));
-                setBalance(calculateCumulativeBalance(selectedDate));
+                setPredictedBalance(calculatePredictedBalance(selectedDate));
             };
 
             const syncAllBudgetsWithAPI = async () => {
@@ -85,6 +105,8 @@ function BudgetPage({ isOnline }) {
                 }
             };
 
+            await fetchTransactionsForCurrentMonth();
+
             if (isOnline) {
                 await syncAllBudgetsWithAPI();
 
@@ -96,7 +118,7 @@ function BudgetPage({ isOnline }) {
 
                     setIncome(String(data.income));
                     setExpenses(String(data.expenses));
-                    setBalance(calculateCumulativeBalance(selectedDate));
+                    setPredictedBalance(calculatePredictedBalance(selectedDate));
 
                     localStorage.setItem(`budget-${selectedDate}`, JSON.stringify(data));
                 } catch {
@@ -113,25 +135,47 @@ function BudgetPage({ isOnline }) {
 
     useEffect(() => {
         if (isInitialized) {
-            setBalance(calculateCumulativeBalance(date));
+            setPredictedBalance(calculatePredictedBalance(date));
+            setActualBalance(calculateActualBalance(date));
         }
-    }, [isInitialized, date]);
+    }, [isInitialized, date, transactionsForCurrentMonth]);
 
-    const calculateCumulativeBalance = (upToDate) => {
+    const calculatePredictedBalance = (upToDate) => {
         let totalIncome = 0;
         let totalExpenses = 0;
 
         months.forEach((month) => {
             if (month <= upToDate) {
-                const item = JSON.parse(localStorage.getItem(`budget-${month}`));
-                if (item) {
-                    totalIncome += parseFloat(item.income) || 0;
-                    totalExpenses += parseFloat(item.expenses) || 0;
+                const budget = JSON.parse(localStorage.getItem(`budget-${month}`));
+                if (budget) {
+                    totalIncome += parseFloat(budget.income) || 0;
+                    totalExpenses += parseFloat(budget.expenses) || 0;
                 }
             }
         });
 
         return totalIncome - totalExpenses;
+    };
+
+    const calculateActualBalance = (upToDate) => {
+        let total = 0;
+
+        months.forEach((month) => {
+            if (month < upToDate) {
+                const transactions = JSON.parse(localStorage.getItem(`transactions-${month}`)) || [];
+                for (const t of transactions) {
+                    total += t.amount;
+                }
+            }
+        });
+
+        if (upToDate && Array.isArray(transactionsForCurrentMonth)) {
+            for (const t of transactionsForCurrentMonth) {
+                total += t.amount;
+            }
+        }
+
+        return total;
     };
 
     const updateServerBudget = async (date, localData) => {
@@ -155,7 +199,8 @@ function BudgetPage({ isOnline }) {
         if (!months.includes(date)) {
             setMonths(prev => Array.from(new Set([...prev, date])).sort());
         }
-        setBalance(calculateCumulativeBalance(date));
+        setPredictedBalance(calculatePredictedBalance(date));
+        setActualBalance(calculateActualBalance(date));
         if (isOnline) {
             fetch(`/api/budget`, {
                 method: 'PUT',
@@ -198,7 +243,7 @@ function BudgetPage({ isOnline }) {
 
                 setIncome('0');
                 setExpenses('0');
-                setBalance(calculateCumulativeBalance(newMonth));
+                setPredictedBalance(calculatePredictedBalance(newMonth));
             }
         } else if (value === '__add_prev__') {
             const firstMonth = months[0];
@@ -227,27 +272,12 @@ function BudgetPage({ isOnline }) {
 
                 setIncome('0');
                 setExpenses('0');
-                setBalance(calculateCumulativeBalance(newMonth));
+                setPredictedBalance(calculatePredictedBalance(newMonth));
             }
         } else {
             setDate(value);
         }
     };
-
-    const handleNumberKeyDown = (e) => {
-        const allowedKeys = [
-            'Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Home', 'End',
-            '.',
-        ];
-
-        const isNumber = e.key >= '0' && e.key <= '9';
-        const isAllowed = allowedKeys.includes(e.key);
-
-        if (!isNumber && !isAllowed) {
-            e.preventDefault();
-        }
-    };
-
 
     return (
         <div className="container py-4">
@@ -298,7 +328,39 @@ function BudgetPage({ isOnline }) {
 
             <hr />
 
-            <h4>Aktualne saldo: {balance.toFixed(2)} zł</h4>
+            <h4>Zamierzone saldo na bieżący miesiąc: {predictedBalance.toFixed(2)} zł</h4>
+
+            <hr />
+
+            <h4>Saldo po transakcjach: {actualBalance.toFixed(2)} zł</h4>
+
+            {Array.isArray(transactionsForCurrentMonth) && transactionsForCurrentMonth.length > 0 ? (
+                <div className="mt-4">
+                    <h5>Transakcje</h5>
+                    <table className="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Opis</th>
+                            <th>Kwota</th>
+                            <th>Typ</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {transactionsForCurrentMonth.map((t, idx) => (
+                            <tr key={idx}>
+                                <td>{t.date}</td>
+                                <td>{t.description}</td>
+                                <td>{t.amount.toFixed(2)} zł</td>
+                                <td>{t.amount >= 0 ? 'Przychód' : 'Wydatek'}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <p className="text-muted mt-3">Brak transakcji dla wybranego miesiąca.</p>
+            )}
         </div>
     );
 }
