@@ -328,11 +328,11 @@ function BudgetPage({ isOnline }) {
 
             <hr />
 
-            <h4>Zamierzone saldo na bieżący miesiąc: {predictedBalance.toFixed(2)} zł</h4>
+            <h4>Przewidywane oszczędności z bieżącego miesiąca: {predictedBalance.toFixed(2)} zł</h4>
 
             <hr />
 
-            <h4>Saldo po transakcjach: {actualBalance.toFixed(2)} zł</h4>
+            <h4>Obliczone oszczędności z bieżącego miesiąca: {actualBalance.toFixed(2)} zł</h4>
 
             {Array.isArray(transactionsForCurrentMonth) && transactionsForCurrentMonth.length > 0 ? (
                 <div className="mt-4">
