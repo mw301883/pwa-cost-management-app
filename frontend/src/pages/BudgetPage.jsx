@@ -297,7 +297,7 @@ function BudgetPage({ isOnline }) {
             </div>
 
             <div className="mb-3">
-                <label className="form-label">Przychody (zł)</label>
+                <label className="form-label">Przewidywane przychody (zł)</label>
                 <input
                     type="number"
                     className="form-control"
@@ -310,7 +310,7 @@ function BudgetPage({ isOnline }) {
             </div>
 
             <div className="mb-3">
-                <label className="form-label">Wydatki (zł)</label>
+                <label className="form-label">Przewidywane wydatki (zł)</label>
                 <input
                     type="number"
                     className="form-control"
