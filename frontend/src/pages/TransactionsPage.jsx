@@ -141,13 +141,10 @@ function TransactionsPage({isOnline}) {
                 console.warn("❌ Błąd usuwania transakcji z API:", err);
                 alert("Błąd usuwania transakcji.");
             }
-        } else {
-            // Offline: usuń lokalnie
             const updated = transactions.filter(t => t._id !== transactionId);
             setTransactions(updated);
             localStorage.setItem(`transactions-${selectedMonth}`, JSON.stringify(updated));
 
-            // Oznacz jako do usunięcia (do późniejszej synchronizacji)
             const pendingDeletesKey = `transactions-delete-pending-${selectedMonth}`;
             const pendingDeletes = JSON.parse(localStorage.getItem(pendingDeletesKey)) || [];
             pendingDeletes.push(transactionId);

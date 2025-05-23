@@ -21,6 +21,18 @@ function App() {
         };
     }, []);
 
+    useEffect(() => {
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    console.log("Powiadomienia włączone");
+                } else {
+                    console.log("Powiadomienia odrzucone");
+                }
+            });
+        }
+    }, []);
+
     return (
         <div className="d-flex flex-column min-vh-100">
             <Router>

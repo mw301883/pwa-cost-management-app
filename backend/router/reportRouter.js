@@ -24,6 +24,16 @@ router.post('/', async (req, res) => {
     }
 });
 
+router.delete('/all', async (req, res) => {
+    try {
+        const result = await Report.deleteMany({});
+        res.json({ message: 'Wszystkie raporty zostały usunięte', deletedCount: result.deletedCount });
+    } catch (err) {
+        console.error('Błąd przy usuwaniu wszystkich raportów:', err);
+        res.status(500).json({ error: 'Błąd podczas usuwania wszystkich raportów' });
+    }
+});
+
 router.delete('/:id', async (req, res) => {
     try {
         const reportId = req.params.id;
@@ -37,6 +47,5 @@ router.delete('/:id', async (req, res) => {
         res.status(500).json({ error: 'Błąd podczas usuwania raportu' });
     }
 });
-
 
 module.exports = router;

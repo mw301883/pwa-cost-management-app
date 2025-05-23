@@ -4,6 +4,7 @@ function ReportsPage() {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [hoverDeleteAll, setHoverDeleteAll] = useState(false);
 
     const fetchReports = () => {
         setLoading(true);
@@ -38,6 +39,19 @@ function ReportsPage() {
             });
     };
 
+    const handleDeleteAll = () => {
+        if (!window.confirm('Czy na pewno chcesz usunąć wszystkie raporty?')) return;
+
+        fetch('/api/reports/all', { method: 'DELETE' })
+            .then(res => {
+                if (!res.ok) throw new Error('Błąd podczas usuwania wszystkich raportów');
+                fetchReports();
+            })
+            .catch(err => {
+                alert(err.message);
+            });
+    };
+
     if (loading) return <p style={{ textAlign: 'center' }}>Ładowanie danych...</p>;
     if (error) return <p style={{ textAlign: 'center', color: 'red' }}>Błąd: {error}</p>;
     if (reports.length === 0) return <p style={{ textAlign: 'center', marginTop: '50px' }}>Brak raportów do wyświetlenia.</p>;
@@ -58,6 +72,24 @@ function ReportsPage() {
             <header style={{ maxWidth: '600px', textAlign: 'center' }}>
                 <h1>Raporty</h1>
                 <p>Przeglądaj listę raportów i zarządzaj nimi, usuwając niepotrzebne pozycje.</p>
+                <button
+                    onClick={handleDeleteAll}
+                    onMouseEnter={() => setHoverDeleteAll(true)}
+                    onMouseLeave={() => setHoverDeleteAll(false)}
+                    style={{
+                        marginTop: '10px',
+                        backgroundColor: hoverDeleteAll ? '#a93226' : '#c0392b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '8px 16px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        transition: 'background-color 0.3s ease',
+                    }}
+                >
+                    Usuń wszystkie
+                </button>
             </header>
 
             <div

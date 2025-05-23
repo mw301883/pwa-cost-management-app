@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import handleNumberKeyDown from "../helpers/numInputVerifier.js";
+import notifyOnSavingsDeficit from "../helpers/notifyOnSavingsDeficit.js";
 
 function BudgetPage({ isOnline }) {
     const [income, setIncome] = useState('');
@@ -134,11 +135,19 @@ function BudgetPage({ isOnline }) {
     }, [isOnline, date]);
 
     useEffect(() => {
-        if (isInitialized) {
-            setPredictedBalance(calculatePredictedBalance(date));
-            setActualBalance(calculateActualBalance(date));
+        if (!isInitialized) return;
+
+        const newPredicted = calculatePredictedBalance(date);
+        const newActual = calculateActualBalance(date);
+
+        setPredictedBalance(newPredicted);
+        setActualBalance(newActual);
+
+        if (newActual < newPredicted && isOnline) {
+            notifyOnSavingsDeficit(newActual, newPredicted, date);
         }
     }, [isInitialized, date, transactionsForCurrentMonth]);
+
 
     const calculatePredictedBalance = (upToDate) => {
         let totalIncome = 0;
