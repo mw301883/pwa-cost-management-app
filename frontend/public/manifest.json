@@ -1,5 +1,5 @@
 {
-  "name": "Cost Management App",
+  "name": "Aplikacja PWA BudżetApp",
   "short_name": "BudżetApp",
   "start_url": "/",
   "display": "standalone",

@@ -135,19 +135,25 @@ function BudgetPage({ isOnline }) {
     }, [isOnline, date]);
 
     useEffect(() => {
-        if (!isInitialized) return;
+        const updateBalances = async () => {
+            if (!isInitialized) return;
 
-        const newPredicted = calculatePredictedBalance(date);
-        const newActual = calculateActualBalance(date);
+            const newPredicted = calculatePredictedBalance(date);
+            const newActual = calculateActualBalance(date);
 
-        setPredictedBalance(newPredicted);
-        setActualBalance(newActual);
+            setPredictedBalance(newPredicted);
+            setActualBalance(newActual);
 
-        if (newActual < newPredicted && isOnline) {
-            notifyOnSavingsDeficit(newActual, newPredicted, date);
-        }
+            if (isOnline) {
+                const actual = await calculateActualBalanceFromAPI(date);
+                if (actual < newPredicted) {
+                    notifyOnSavingsDeficit(actual, newPredicted, date);
+                }
+            }
+        };
+
+        updateBalances();
     }, [isInitialized, date, transactionsForCurrentMonth]);
-
 
     const calculatePredictedBalance = (upToDate) => {
         let totalIncome = 0;
@@ -180,6 +186,43 @@ function BudgetPage({ isOnline }) {
 
         if (upToDate && Array.isArray(transactionsForCurrentMonth)) {
             for (const t of transactionsForCurrentMonth) {
+                total += t.amount;
+            }
+        }
+
+        return total;
+    };
+
+    const fetchTransactionsForMonthFromAPI = async (month) => {
+        try {
+            const res = await fetch(`/api/transactions/${month}`);
+            if (!res.ok) {
+                console.warn(`❌ Nie udało się pobrać transakcji dla ${month}`);
+                return [];
+            }
+            const data = await res.json();
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error(`❌ Błąd przy pobieraniu transakcji (${month}):`, error);
+            return [];
+        }
+    };
+
+    const calculateActualBalanceFromAPI = async (upToDate) => {
+        let total = 0;
+
+        for (const month of months) {
+            if (month < upToDate) {
+                const transactions = await fetchTransactionsForMonthFromAPI(month);
+                for (const t of transactions) {
+                    total += t.amount;
+                }
+            }
+        }
+
+        if (upToDate) {
+            const currentMonthTransactions = await fetchTransactionsForMonthFromAPI(upToDate);
+            for (const t of currentMonthTransactions) {
                 total += t.amount;
             }
         }

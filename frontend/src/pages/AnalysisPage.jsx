@@ -195,7 +195,6 @@ function AnalysisPage({ isOnline }) {
                 </div>
             )}
 
-            {/* Filtry linii */}
             <div className="mb-3">
                 <strong>Filtry wykresu:</strong>
                 <div className="form-check">

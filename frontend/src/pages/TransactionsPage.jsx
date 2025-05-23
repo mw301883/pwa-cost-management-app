@@ -115,31 +115,54 @@ function TransactionsPage({isOnline}) {
         }
     };
 
+    const handlePendingTransactionsSubmit = (numericAmount) => {
+        const pendingKey = `transactions-pending-${selectedMonth}`;
+        const pendingTransactions = JSON.parse(localStorage.getItem(pendingKey)) || [];
+        pendingTransactions.push({date: selectedMonth, description, amount: numericAmount});
+        localStorage.setItem(pendingKey, JSON.stringify(pendingTransactions));
+    }
+
+    const addTransactionToLocalState = (transaction) => {
+        const updatedTransactions = [...transactions, transaction];
+        setTransactions(updatedTransactions);
+        localStorage.setItem(`transactions-${selectedMonth}`, JSON.stringify(updatedTransactions));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const numericAmount = parseFloat(amount);
         if (isNaN(numericAmount) || description.trim() === '') return;
 
+        const newTransaction = {
+            _id: Date.now(),
+            date: selectedMonth,
+            description,
+            amount: numericAmount,
+        };
+
         if (isOnline) {
             try {
-                await axios.post('/api/transactions', {
-                    date: selectedMonth,
-                    description,
-                    amount: numericAmount,
-                });
+                await axios.post('/api/transactions', newTransaction);
                 fetchTransactions();
             } catch (err) {
                 console.warn("❌ Błąd zapisywania transakcji na serwerze:", err);
-                const pendingKey = `transactions-pending-${selectedMonth}`;
-                const pendingTransactions = JSON.parse(localStorage.getItem(pendingKey)) || [];
-                pendingTransactions.push({date: selectedMonth, description, amount: numericAmount});
-                localStorage.setItem(pendingKey, JSON.stringify(pendingTransactions));
+                handlePendingTransactionsSubmit(numericAmount);
+                addTransactionToLocalState(newTransaction);
             }
+        } else {
+            handlePendingTransactionsSubmit(numericAmount);
         }
-
+        addTransactionToLocalState(newTransaction);
         setDescription('');
         setAmount('');
     };
+
+    const handlePendingTransactionsDelete = (transactionId) => {
+        const pendingDeletesKey = `transactions-delete-pending-${selectedMonth}`;
+        const pendingDeletes = JSON.parse(localStorage.getItem(pendingDeletesKey)) || [];
+        pendingDeletes.push(transactionId);
+        localStorage.setItem(pendingDeletesKey, JSON.stringify(pendingDeletes));
+    }
 
     const handleDelete = async (transactionId) => {
         if (!window.confirm("Czy na pewno chcesz usunąć tę transakcję?")) return;
@@ -151,16 +174,14 @@ function TransactionsPage({isOnline}) {
             } catch (err) {
                 console.warn("❌ Błąd usuwania transakcji z API:", err);
                 alert("Błąd usuwania transakcji.");
+                handlePendingTransactionsDelete(transactionId);
             }
-            const updated = transactions.filter(t => t._id !== transactionId);
-            setTransactions(updated);
-            localStorage.setItem(`transactions-${selectedMonth}`, JSON.stringify(updated));
-
-            const pendingDeletesKey = `transactions-delete-pending-${selectedMonth}`;
-            const pendingDeletes = JSON.parse(localStorage.getItem(pendingDeletesKey)) || [];
-            pendingDeletes.push(transactionId);
-            localStorage.setItem(pendingDeletesKey, JSON.stringify(pendingDeletes));
+        } else {
+            handlePendingTransactionsDelete(transactionId);
         }
+        const updated = transactions.filter(t => t._id !== transactionId);
+        setTransactions(updated);
+        localStorage.setItem(`transactions-${selectedMonth}`, JSON.stringify(updated));
     };
 
     return (

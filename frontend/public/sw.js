@@ -77,7 +77,6 @@ self.addEventListener('push', event => {
         body: data.body || 'Sprawdź swoje oszczędności!',
         icon: '/icons/manifest-icon-192.maskable.png',
         badge: '/icons/manifest-icon-192.maskable.png',
-        data: data.url || '/',
     };
 
     event.waitUntil(self.registration.showNotification(title, options));
