@@ -9,11 +9,14 @@ const staticAssets = [
     '/src/main.jsx',
     '/src/App.jsx',
     '/src/components/Navbar.jsx',
+    '/src/components/Footer.jsx',
     '/src/pages/DashboardPage.jsx',
     '/src/pages/AnalysisPage.jsx',
     '/src/pages/BudgetPage.jsx',
     '/src/pages/ReportsPage.jsx',
     '/src/pages/TransactionsPage.jsx',
+    'src/helpers/notifyOnSavingsDeficit.js',
+    'src/helpers/numInputVerifier.js',
 ];
 
 self.addEventListener('install', (e) => {

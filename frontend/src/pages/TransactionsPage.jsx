@@ -8,11 +8,22 @@ function TransactionsPage({isOnline}) {
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     });
-
     const [transactions, setTransactions] = useState([]);
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState('');
     const [syncStatus, setSyncStatus] = useState(null);
+    const [isMobileWidth, setIsMobileWidth] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobileWidth(window.innerWidth < 768);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+
 
     useEffect(() => {
         const initMonthsAndSync = async () => {
@@ -180,14 +191,27 @@ function TransactionsPage({isOnline}) {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                 />
-                <input
-                    type="number"
-                    className="form-control mb-2"
-                    placeholder="Kwota (np. -100 lub 200)"
-                    value={amount}
-                    onKeyDown={handleNumberKeyDown}
-                    onChange={(e) => setAmount(e.target.value)}
-                />
+                <div className="input-group mb-2">
+                    {isMobileWidth && (
+                        <button
+                            type="button"
+                            className="btn btn-outline-secondary"
+                            onClick={() => setAmount(prev => prev.startsWith('-') ? prev.slice(1) : '-' + prev)}
+                        >
+                            ➖
+                        </button>
+                    )}
+                    <input
+                        type="number"
+                        inputMode="numeric"
+                        pattern="-?[0-9]*[.,]?[0-9]*"
+                        className="form-control"
+                        placeholder="Kwota (np. -100 lub 200)"
+                        value={amount}
+                        onKeyDown={handleNumberKeyDown}
+                        onChange={(e) => setAmount(e.target.value)}
+                    />
+                </div>
                 <button type="submit" className="btn btn-primary">Dodaj transakcję</button>
             </form>
 
